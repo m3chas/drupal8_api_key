@@ -1,0 +1,74 @@
+<?php
+
+
+/**
+ * @file
+ * Site API KEY module:
+ * 1. A new form text field named "Site API Key" needs to be added to the "Site Information" form with the default value of “No API Key yet”.
+ * 2. When this form is submitted, the value that the user entered for this field should be saved as the system variable named "siteapikey".
+ * 3. A Drupal message should inform the user that the Site API Key has been saved with that value.
+ * 4. When this form is visited after the "Site API Key" is saved, the field should be populated with the correct value.
+ * 5. The text of the "Save configuration" button should change to "Update Configuration".
+ * 6. This module also provides a URL that responds with a JSON representation of a given node with the content type "page" only if the previously submitted API Key and a node id (nid) of an appropriate node are present, otherwise it will respond with "access denied".
+ */
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function site_api_key_form_system_site_information_settings_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
+
+  // Get Drupal Site API Key configuration.
+  $config = \Drupal::config('siteapikey.settings');
+
+  // Check API Key Value or display text.
+  $site_api_key = $config->get('key') ?: t('No API Key yet');
+
+  // Create site_api_key Form container.
+  $form['site_api_key'] = [
+    '#type' => 'details',
+    '#title' => t('Site API Key'),
+    '#open' => TRUE,
+    '#weight' => 10,
+  ];
+
+  // Create site_api_key text field container.
+  $form['site_api_key']['key'] = [
+    '#type' => 'textfield',
+    '#title' => t('Site API Key'),
+    '#default_value' => $site_api_key,
+  ];
+
+  // The text of the "Save configuration" button should change to "Update Configuration" if Key exist.
+  if ( !empty($config->get('siteapikey')) && $site_api_key != 'No API Key yet' ) {
+
+    $form['actions']['submit']['#value'] = t('Update Configuration');
+  }
+
+  // Submit handler.
+  $form['#submit'][] = 'site_api_key_system_site_information_settings_submit_handler';
+
+}
+
+/**
+ * Custom Submit handler for FormID system_site_information_settings.
+ */
+function site_api_key_system_site_information_settings_submit_handler(&$form,\Drupal\Core\Form\FormStateInterface $form_state ) {
+
+  // Get Form State Value.
+
+  $site_api_key = $form_state->getValue(['key']);
+
+  // If the user enter a empty value, show a message.
+  if (empty($site_api_key) || $site_api_key === 'No API Key yet' ) {
+
+    drupal_set_message(t('Please enter a value on the API key field below.'), 'warning');
+  } else {
+
+  // Save site_api_key value using Drupal configuration API.
+  \Drupal::configFactory()->getEditable('siteapikey.settings')->set('key', $site_api_key)->save();
+
+  // A Drupal message should inform the user that the Site API Key has been saved with that value.
+  drupal_set_message(t('Site\'s API Key has been saved with @site_api_key .', array('@site_api_key' => $site_api_key)));
+  }
+
+}
